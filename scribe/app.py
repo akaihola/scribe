@@ -6,7 +6,7 @@ import argparse
 from typing import Iterable
 from scribe.audio import Microphone
 from scribe.util import print_partial, clear_line, prompt_choices, ansi_link, colored
-from scribe.models import VoskTranscriber, WhisperTranscriber, OpenaiAPITranscriber
+from scribe.models import AbstractTranscriber, VoskTranscriber, WhisperTranscriber, OpenaiAPITranscriber
 
 with open(Path(__file__).parent / "models.toml", "rb") as f:
     language_config_default = tomllib.load(f)
@@ -40,11 +40,12 @@ def pick_specialist_model(model, language, backend):
     return model
 
 
-class DummyTranscriber:
+class DummyTranscriber(AbstractTranscriber):
+    backend = "dummy"
 
-    def __init__(self, backend, model_name):
-        self.backend = backend
+    def __init__(self, model_name="dummy", **kwargs):
         self.model_name = model_name
+        super().__init__(model=None, model_name=model_name, **kwargs)
 
     def start_recording(self, micro, **kwargs):
         while True:
@@ -53,8 +54,6 @@ class DummyTranscriber:
             except KeyboardInterrupt:
                 break
 
-    def __getattr__(self, item):
-        return None
 
 whisper_models = ["tiny", "base", "small", "medium", "large", "turbo"]
 whisper_english_models = ["tiny.en", "base.en", "small.en", "medium.en"]
@@ -68,7 +67,7 @@ def get_transcriber(model=None, backend=None, dummy=False, prompt=True, language
                     download_folder_vosk=None, download_folder_whisper=None, **kwargs):
 
     if dummy:
-        return DummyTranscriber("whisper", "dummy")
+        return DummyTranscriber(model_name="dummy")
 
     if model and not backend:
         if model.startswith("vosk-"):
