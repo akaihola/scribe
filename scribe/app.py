@@ -307,7 +307,8 @@ def create_app(micro, transcriber, other_transcribers=None, transcriber_options=
 
     def callback_quit(icon, item):
         icon.visible = False
-        ## Here we need to stop the recording thread
+        if hasattr(icon, '_hotkey_listener') and icon._hotkey_listener:
+            icon._hotkey_listener.stop()
         callback_stop_recording(icon, item)
         icon.stop()
 
@@ -427,6 +428,19 @@ def create_app(micro, transcriber, other_transcribers=None, transcriber_options=
     icon._model_selection = False
     icon._transcriber = transcriber
     del transcriber
+
+    def hotkey_callback():
+        callback_record(icon, None)
+
+    try:
+        from pynput import keyboard
+        hotkey_listener = keyboard.GlobalHotKeys({
+            '<ctrl>+<alt>+r': hotkey_callback
+        })
+        hotkey_listener.start()
+        icon._hotkey_listener = hotkey_listener
+    except ImportError:
+        icon._hotkey_listener = None
 
     return icon
 
